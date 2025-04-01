@@ -5,8 +5,18 @@ import { Detection, UnsafePattern } from "../types";
  */
 export function scanForUnsafePatterns(
   content: string,
-  patterns: UnsafePattern[]
+  patterns: UnsafePattern[],
+  filePath?: string
 ): Detection[] {
+  // Skip scanning if this is the patterns definition file
+  if (
+    filePath &&
+    (filePath.includes("unsafe-queries.ts") ||
+      filePath.includes("unsafe-queries.js"))
+  ) {
+    return [];
+  }
+
   const detections: Detection[] = [];
   const lines = content.split("\n");
 

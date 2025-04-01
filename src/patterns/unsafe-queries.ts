@@ -415,14 +415,15 @@ export const unsafePatterns: UnsafePattern[] = [
     id: "MONGOOSE_QUERY_EXEC_MISSING",
     name: "Mongoose Query Exec Missing",
     pattern:
-      /\.(find|findOne|findById|update|delete|count)(?!\s*\(\s*\)|\s*\(\s*.*?\s*\)\s*\.(exec|then|catch)\b)/i,
+      /(?<!await\s+)(?<!this\.)(?<!\.)(mongoose\.|mongodb\.|MongoClient\.|db\.|Model\.|Collection\.|Schema\.)(find|findOne|findById|updateOne|updateMany|deleteOne|deleteMany|count|countDocuments)(?!\s*\(\s*\)|\s*\(\s*.*?\s*\)\s*\.(exec|then|catch)\b)(?!\s*\(\s*.*?\s*\)\s*;)/i,
     description:
       "Not calling .exec() or not using a callback/Promise with Mongoose queries can lead to unexpected behavior",
     severity: "low",
     suggestion:
-      "Always use .exec() or a callback/Promise with Mongoose queries to ensure proper error handling",
+      "Always use .exec(), await, or a callback/Promise with Mongoose queries to ensure proper error handling",
     example: "const users = User.find({ active: true });",
-    safeExample: "const users = await User.find({ active: true }).exec();",
+    safeExample:
+      "const users = await User.find({ active: true }).exec();\n// OR\nconst users = await User.find({ active: true });",
     docUrl:
       "https://www.mongodb.com/docs/manual/reference/method/db.collection.find/#security",
   },
@@ -430,7 +431,7 @@ export const unsafePatterns: UnsafePattern[] = [
     id: "UNHANDLED_PROMISE_REJECTION",
     name: "Unhandled Promise Rejection",
     pattern:
-      /await\s+(\w+\.)*(find|findOne|findById|update|delete|aggregate|count).*?(?!\s*try\s*\{)/i,
+      /await\s+(db\.|mongo|mongoose\.|Model\.|collection\.)+(find|findOne|findById|update|updateOne|updateMany|delete|deleteOne|deleteMany|aggregate|count).*?(?!\s*try\s*\{)/i,
     description:
       "MongoDB operations without proper try/catch blocks can lead to unhandled promise rejections",
     severity: "medium",
@@ -492,7 +493,7 @@ export const unsafePatterns: UnsafePattern[] = [
     id: "SECRETS_IN_QUERY",
     name: "Secrets in Query",
     pattern:
-      /(api[_-]?key|secret|password|token|auth[_-]?token|credential)[^\n]{1,30}(=|:)[^\n]{1,30}/i,
+      /db\.[a-zA-Z0-9_]+\.(find|findOne|update|delete).*?(api[_-]?key|secret|password|token|auth[_-]?token|credential)[^\n]{1,30}(=|:)[^\n]{1,30}/i,
     description:
       "Hardcoded secrets or credentials in database queries can lead to security breaches",
     severity: "high",
@@ -506,7 +507,8 @@ export const unsafePatterns: UnsafePattern[] = [
   {
     id: "DANGEROUS_PROJECTION",
     name: "Dangerous Projection Operators",
-    pattern: /\$\s*:\s*(\{|\[|\$)/i,
+    pattern:
+      /db\.[a-zA-Z0-9_]+\.(find|findOne)\s*\(\s*.*?,\s*\{\s*\$\s*:\s*(\{|\[|\$)/i,
     description:
       "Using the $ projection operator with untrusted input can lead to data exposure",
     severity: "high",

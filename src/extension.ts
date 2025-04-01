@@ -17,6 +17,21 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.createDiagnosticCollection("safemongo");
   context.subscriptions.push(diagnosticCollection);
 
+  // Register code actions provider
+  let disposable = vscode.languages.registerCodeActionsProvider(
+    ["javascript", "typescript", "javascriptreact", "typescriptreact"],
+    new MongoSafeCodeActionProvider(),
+    {
+      providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
+    }
+  );
+  context.subscriptions.push(disposable);
+
+  // Run on current open file when first activated
+  if (vscode.window.activeTextEditor) {
+    scanCurrentFile(vscode.window.activeTextEditor);
+  }
+
   // Register the command to check the current file
   const checkCommand = vscode.commands.registerCommand(
     "safemongo.checkCurrentFile",
@@ -77,7 +92,11 @@ function scanCurrentFile(editor: vscode.TextEditor) {
   }
 
   const text = document.getText();
-  const detections = scanForUnsafePatterns(text, unsafePatterns);
+  const detections = scanForUnsafePatterns(
+    text,
+    unsafePatterns,
+    document.fileName
+  );
 
   updateDiagnostics(document, detections);
 }
@@ -89,6 +108,15 @@ function updateDiagnostics(
   document: vscode.TextDocument,
   detections: Detection[]
 ) {
+  // Skip the pattern definition file itself
+  if (
+    document.fileName.includes("unsafe-queries.ts") ||
+    document.fileName.includes("unsafe-queries.js")
+  ) {
+    diagnosticCollection.set(document.uri, []);
+    return;
+  }
+
   const diagnostics: vscode.Diagnostic[] = [];
 
   detections.forEach((detection) => {
